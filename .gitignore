@@ -171,6 +171,10 @@ cython_debug/
 .terraform.lock.hcl
 terraform/terraform.tfvars
 
+# AWS Lambda deployment packages
+aws-lambda/customer-review-creator/deployment-package.zip
+aws-lambda/policy-producer/deployment-package.zip
+
 # macOS specific
 .DS_Store
 .AppleDouble

@@ -1,0 +1,32 @@
+aws_region = "us-east-1"
+runtime = "python3.11"
+entry_point = "main"
+
+customer_review_function_name = "customer-review-creator"
+policy_producer_function_name = "policy-producer"
+
+customer_review_kafka_topic_name = "customer-reviews"
+policy_producer_kafka_topic_name = "policy-producer"
+
+customer_review_secret_name = "customer-review-kafka-secret"
+policy_producer_secret_name = "policy-producer-kafka-secret"
+
+customer_review_min_reviews_per_run = "10"
+customer_review_max_reviews_per_run = "20"
+customer_review_seconds_between_reviews = "5"
+
+policy_producer_min_reviews_per_run = "60"
+policy_producer_max_reviews_per_run = "100"
+policy_producer_seconds_between_reviews = "0"
+
+aws_cluster_name = "aws-kafka-cluster"
+
+# Confluent Environment and Schema Registry configuration
+environment_name = "churn-prevention-env"
+schema_registry_package = "ESSENTIALS"
+schema_registry_region = "us-east-1"
+
+# These need to be set to actual values before running Terraform
+apikey_owner_id = "u-12345"
+confluent_cloud_api_key = "Your-API-Key"
+confluent_cloud_api_secret = "Your-API-Secret"
