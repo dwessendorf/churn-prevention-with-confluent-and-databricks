@@ -1,9 +1,23 @@
 #!/bin/bash
 set -e
 
+# Check if DEBUG flag is set
+if [ "$DEBUG" = "true" ]; then
+  echo "Running in debug mode"
+  set -x
+fi
+
+echo "Building policy-producer Lambda function..."
+
 # Create a temporary directory for the build
 rm -rf build
 mkdir -p build
+
+# Check for required files
+if [ ! -f "requirements.txt" ]; then
+  echo "ERROR: requirements.txt not found!"
+  exit 1
+fi
 
 # Check if input_data directory exists
 if [ ! -d "input_data" ]; then
@@ -37,6 +51,7 @@ docker run --rm -v $(pwd):/var/task --entrypoint=/bin/bash -w /var/task public.e
       ls -la /tmp/package/input_data/
     else
       echo \"WARNING: input_data directory not found inside container\"
+      exit 1
     fi
     
     # Create zip package
@@ -44,5 +59,12 @@ docker run --rm -v $(pwd):/var/task --entrypoint=/bin/bash -w /var/task public.e
     zip -r /var/task/deployment-package.zip .
   "
 
-echo "Deployment package created: deployment-package.zip"
+# Verify deployment package was created
+if [ ! -f "deployment-package.zip" ]; then
+  echo "ERROR: Failed to create deployment-package.zip"
+  exit 1
+fi
+
+echo "Deployment package created: deployment-package.zip ($(du -h deployment-package.zip | cut -f1))"
+echo "Package contents (showing input_data entries):"
 unzip -l deployment-package.zip | grep input_data 
