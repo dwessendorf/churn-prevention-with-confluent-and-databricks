@@ -63,4 +63,10 @@ variable "kafka_api_key_secret" {
 variable "kafka_bootstrap_server" {
   description = "Kafka bootstrap server"
   type        = string
+}
+
+variable "policy_producer_topic_name" {
+  description = "Kafka topic name used by the policy producer (for the consumer to read from)"
+  type        = string
+  default     = ""
 } 

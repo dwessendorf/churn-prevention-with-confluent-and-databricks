@@ -37,7 +37,7 @@ variable "customer_review_kafka_topic_name" {
 variable "policy_producer_kafka_topic_name" {
   description = "Kafka topic name for policy producer"
   type        = string
-  default     = "policy-producer"
+  default     = "car-insurance-policies"
 }
 
 variable "customer_review_secret_name" {
@@ -98,18 +98,6 @@ variable "environment_name" {
   description = "Name of the Confluent environment"
   type        = string
   default     = "churn-prevention-env"
-}
-
-variable "schema_registry_package" {
-  description = "Package type for Schema Registry (ESSENTIALS or ADVANCED)"
-  type        = string
-  default     = "ESSENTIALS"
-}
-
-variable "schema_registry_region" {
-  description = "Region for Schema Registry deployment"
-  type        = string
-  default     = "us-east-1"
 }
 
 variable "apikey_owner_id" {

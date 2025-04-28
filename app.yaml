@@ -1,0 +1,68 @@
+name: kafka-genai-demo
+package: streamlit==1.30.0
+target: streamlit
+entrypoint: app.py
+environment_vars:
+  DATABRICKS_WAREHOUSE_ID: ${secrets/kafka-app-warehouse-id}
+  KAFKA_BOOTSTRAP_SERVERS: ${secrets/kafka-app-bootstrap-servers}
+  KAFKA_INPUT_TOPIC: ${secrets/kafka-app-input-topic}
+  KAFKA_OUTPUT_TOPIC: ${secrets/kafka-app-output-topic}
+  KAFKA_GROUP_ID: ${secrets/kafka-app-group-id}
+  DATABRICKS_MODEL_ENDPOINT: ${secrets/kafka-app-model-endpoint}
+  KAFKA_SASL_USERNAME: ${secrets/kafka-app-username}
+  KAFKA_SASL_PASSWORD: ${secrets/kafka-app-password}
+  KAFKA_SASL_MECHANISM: ${secrets/kafka-app-sasl-mechanism}
+  KAFKA_SECURITY_PROTOCOL: ${secrets/kafka-app-security-protocol}
+
+resources:
+  sql_warehouses:
+    - name: sql-warehouse
+      warehouse_id: ${secrets/kafka-app-warehouse-id}
+      permissions:
+        - level: CAN_USE
+  secrets:
+    - name: kafka-app-bootstrap-servers
+      key: bootstrap-servers
+      permissions:
+        - level: CAN_READ
+    - name: kafka-app-group-id
+      key: group-id
+      permissions:
+        - level: CAN_READ
+    - name: kafka-app-input-topic
+      key: input-secret-topic
+      permissions:
+        - level: CAN_READ
+    - name: kafka-app-output-topic
+      key: output-secret-topic
+      permissions:
+        - level: CAN_READ
+    - name: kafka-app-model-endpoint
+      key: model-endpoint
+      permissions:
+        - level: CAN_READ
+    - name: kafka-app-username
+      key: username
+      permissions:
+        - level: CAN_READ
+    - name: kafka-app-password
+      key: password
+      permissions:
+        - level: CAN_READ
+    - name: kafka-app-sasl-mechanism
+      key: sasl-mechanism
+      permissions:
+        - level: CAN_READ
+    - name: kafka-app-security-protocol
+      key: security-protocol
+      permissions:
+        - level: CAN_READ
+    - name: kafka-app-warehouse-id
+      key: warehouse-id
+      permissions:
+        - level: CAN_READ
+  serving_endpoints:
+    - name: serving-endpoint
+      endpoint_name: bedrock-claude-haiku
+      permissions:
+        - level: CAN_QUERY 

@@ -11,10 +11,8 @@ provider "confluent" {
 module "confluent_environment" {
   source = "./modules/confluent_environment"
   
-  environment_name        = var.environment_name
-  schema_registry_package = var.schema_registry_package
-  schema_registry_region  = var.schema_registry_region
-  apikey_owner_id         = var.apikey_owner_id
+  environment_name = var.environment_name
+  apikey_owner_id  = var.apikey_owner_id
 }
 
 # Import existing module for Confluent Cloud
@@ -76,6 +74,7 @@ module "customer_review_creator_lambda" {
   kafka_api_key_id         = module.confluent_cluster_aws.api_key_id
   kafka_api_key_secret     = module.confluent_cluster_aws.api_key_secret
   kafka_bootstrap_server   = module.confluent_cluster_aws.bootstrap_servers
+  policy_producer_topic_name = var.policy_producer_kafka_topic_name
 }
 
 module "policy_producer_lambda" {

@@ -1,108 +1,73 @@
-# Churn Prevention with Confluent and Databricks
+# Kafka GenAI Demo - Databricks App
 
-This repository contains infrastructure and application code for a churn prevention system using Confluent Kafka and Databricks. The system processes customer reviews and policy data to help identify potential customer churn.
+This repository contains a Streamlit application for sentiment analysis of messages from Kafka, to be deployed as a Databricks Native Application.
 
-## Components
+## Prerequisites
 
-- **AWS Lambda Functions**: 
-  - `customer-review-creator`: Generates synthetic customer reviews and publishes to Kafka
-  - `policy-producer`: Generates policy data and publishes to Kafka
+1. Databricks CLI installed and configured
+2. Access to a Databricks workspace
+3. Appropriate permissions to create and deploy applications
+4. Kafka cluster with configured topics and credentials
 
-- **Terraform**: Infrastructure as Code for deploying the required resources on AWS and Confluent Cloud
+## App Structure
 
-## Getting Started
+- `app.py` - Main Streamlit application
+- `app.yaml` - Configuration for the Databricks App
+- `requirements.txt` - Python dependencies
+- `kafka_utils.py` - Kafka consumer and producer utilities
+- `model_serving_utils.py` - Functions for querying model endpoints
+- `deploy_app.sh` - Deployment script
 
-1. Set up credentials for AWS and Confluent Cloud
-2. Update terraform.tfvars with your configuration
-3. Run `terraform init` and `terraform apply` to deploy the infrastructure
-4. Build and deploy Lambda functions using the build functions described below
+## Secrets Setup
 
-## Build Functions
+Before deploying, ensure the following secrets are set up in your Databricks workspace:
 
-The repository includes build scripts for creating AWS Lambda deployment packages. These scripts use Docker to ensure consistent environments and dependencies.
-
-### Building Lambda Functions
-
-#### Option 1: Build Individual Functions
-
-To build either of the Lambda functions:
-
-```bash
-# For customer-review-creator function
-cd aws-lambda/customer-review-creator
-./build.sh
-
-# For policy-producer function
-cd aws-lambda/policy-producer
-./build.sh
-```
-
-#### Option 2: Build All Functions
-
-To build all Lambda functions at once:
-
-```bash
-# From the project root
-./build-all.sh
-```
-
-### Build Process Details
-
-The build scripts:
-
-1. Create a temporary build directory
-2. Use Docker with AWS Lambda Python 3.11 runtime container
-3. Install required dependencies from `requirements.txt`
-4. Package function code and data files
-5. Create a deployment-ready ZIP file
-
-#### Requirements
-
-- Docker installed and running
-- AWS CLI configured with appropriate credentials
-- Bash shell
+1. `bootstrap-servers` - Kafka bootstrap servers
+2. `group-id` - Kafka consumer group ID
+3. `input-secret-topic` - Kafka input topic
+4. `output-secret-topic` - Kafka output topic
+5. `model-endpoint` - Name of the model endpoint
+6. `warehouse-id` - SQL warehouse ID
+7. `username` - Kafka username (for SASL authentication)
+8. `password` - Kafka password (for SASL authentication)
+9. `sasl-mechanism` - Kafka SASL mechanism (typically PLAIN)
+10. `security-protocol` - Kafka security protocol (typically SASL_SSL)
 
 ## Deployment
 
-After building the Lambda deployment packages:
-
-1. Verify deployment packages were created:
-   ```bash
-   ls -la aws-lambda/customer-review-creator/deployment-package.zip
-   ls -la aws-lambda/policy-producer/deployment-package.zip
+1. Make sure your Databricks CLI is configured:
+   ```
+   databricks configure
    ```
 
-2. Deploy using Terraform:
-   ```bash
-   cd terraform
-   terraform apply
+2. Run the deployment script:
+   ```
+   chmod +x deploy_app.sh
+   ./deploy_app.sh
    ```
 
-## Debugging Build Issues
+3. Or deploy manually:
+   ```
+   # Create workspace directory
+   databricks workspace mkdirs /Workspace/Users/your-email/databricks_apps/kafka-genai-demo/streamlit-data-app
+   
+   # Sync files to workspace
+   databricks workspace import_dir . /Workspace/Users/your-email/databricks_apps/kafka-genai-demo/streamlit-data-app --overwrite
+   
+   # Deploy the app
+   databricks apps deploy kafka-genai-demo --source-code-path /Workspace/Users/your-email/databricks_apps/kafka-genai-demo/streamlit-data-app
+   ```
 
-If you encounter issues building the Lambda functions:
+## Viewing the App
 
-- Ensure Docker is running
-- Check that all required data files are in place:
-  - For customer-review-creator: `positive_scenarios.csv` and `negative_scenarios.csv`
-  - For policy-producer: The `input_data` directory and its contents
-- Inspect build logs for specific error messages
-- Try building with verbose output:
-  ```bash
-  DEBUG=true ./build.sh
-  ```
+After deployment, your app will be available in the Databricks UI under:
+Compute > Apps > kafka-genai-demo
 
-## Development
+## Troubleshooting
 
-- Test functions locally before deploying
-- Use the AWS Lambda console to monitor function logs
-- For local testing, you can use the AWS SAM CLI
+If you encounter issues:
 
-## Cleanup
-
-To clean up all resources:
-
-```bash
-cd terraform
-terraform destroy
-``` 
+1. Check the app logs in the Databricks UI
+2. Verify that all required secrets are properly configured
+3. Ensure your Kafka cluster is accessible from Databricks
+4. Confirm that the model endpoint exists and is properly configured 

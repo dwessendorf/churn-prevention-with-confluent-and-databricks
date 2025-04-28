@@ -2,7 +2,7 @@ terraform {
   required_providers {
     confluent = {
       source  = "confluentinc/confluent"
-      version = "~> 1.0"
+      version = "2.25.0"
     }
   }
 }
@@ -10,13 +10,6 @@ terraform {
 # Create a Confluent Environment
 resource "confluent_environment" "main" {
   display_name = var.environment_name
-}
-
-# Look up available Schema Registry regions
-data "confluent_schema_registry_region" "schema_region" {
-  cloud   = "AWS"
-  region  = var.schema_registry_region
-  package = var.schema_registry_package
 }
 
 # Create service account for environment management
@@ -32,17 +25,11 @@ resource "confluent_role_binding" "env_manager_admin" {
   crn_pattern = confluent_environment.main.resource_name
 }
 
-# Create Schema Registry cluster
-resource "confluent_schema_registry_cluster" "essentials" {
-  package = data.confluent_schema_registry_region.schema_region.package
-
+# Use Schema Registry cluster data source
+# Schema Registry cluster is automatically created when the environment is created
+data "confluent_schema_registry_cluster" "essentials" {
   environment {
     id = confluent_environment.main.id
-  }
-
-  region {
-    # Using data source to ensure a valid region ID
-    id = data.confluent_schema_registry_region.schema_region.id
   }
 }
 
@@ -58,9 +45,9 @@ resource "confluent_api_key" "schema_registry_api_key" {
   }
 
   managed_resource {
-    id          = confluent_schema_registry_cluster.essentials.id
-    api_version = confluent_schema_registry_cluster.essentials.api_version
-    kind        = confluent_schema_registry_cluster.essentials.kind
+    id          = data.confluent_schema_registry_cluster.essentials.id
+    api_version = data.confluent_schema_registry_cluster.essentials.api_version
+    kind        = data.confluent_schema_registry_cluster.essentials.kind
 
     environment {
       id = confluent_environment.main.id

@@ -5,7 +5,9 @@ import random
 import uuid
 from datetime import datetime
 import time
-from faker import Faker
+from mimesis import Generic, Person, Address
+from mimesis.locales import Locale
+from mimesis.enums import Gender
 import datetime
 from dateutil.relativedelta import relativedelta
 from datetime import date
@@ -16,6 +18,7 @@ import boto3
 import yaml
 from typing import Dict
 import logging
+from unidecode import unidecode
 
 
 ########################################################################################
@@ -32,8 +35,145 @@ __location__ = os.path.dirname(os.path.realpath(__file__))
 logging.basicConfig(level=logging.INFO)
 
 
-# Initialize Faker for the German market
-fake = Faker(["de-DE"])
+# Initialize Mimesis for the German market (default locale)
+default_locale = Locale.DE
+default_generic = Generic(default_locale)
+default_person = Person(default_locale)
+default_address = Address(default_locale)
+
+# Create a dictionary of Mimesis instances for different cultural backgrounds
+mimesis_instances = {}
+
+# Mapping of cultural backgrounds to Mimesis locales - limited to definitely supported locales
+culture_to_locale = {
+    "German": Locale.DE,
+    "American": Locale.EN,
+    "British": Locale.EN_GB,
+    "French": Locale.FR,
+    "Italian": Locale.IT,
+    "Spanish": Locale.ES,
+    "Dutch": Locale.NL,
+    "Chinese": Locale.ZH,
+    "Japanese": Locale.JA,
+    "Korean": Locale.KO,
+    "Indian": Locale.EN,  # Using English for Indian names
+    "Australian": Locale.EN_AU,
+    "Canadian": Locale.EN_CA,  # Fixed: was EN, now EN_CA
+    "Irish": Locale.EN_GB,
+    "Portuguese": Locale.PT,
+    "Russian": Locale.RU,
+    "Brazilian": Locale.PT_BR,
+    "Mexican": Locale.ES_MX,  # Fixed: was ES, now ES_MX
+    "Turkish": Locale.TR,
+    "Nigerian": Locale.EN,
+    "South African": Locale.EN_GB,  # Using British English as closest
+    "Egyptian": Locale.EN,  # Changed to EN with custom name handling
+    "Scandinavian": Locale.SV,  # Using Swedish as representative
+    "Eastern European": Locale.PL,  # Using Polish as representative
+    "Middle Eastern": Locale.EN,  # Changed to EN with custom name handling
+    "Southeast Asian": Locale.JA,  # Fixed: was EN, now JA as one option
+    "Latin American": Locale.ES_MX,  # Fixed: was ES, now ES_MX
+    "Caribbean": Locale.ES_MX,  # Fixed: was ES, now ES_MX
+    "Sub-Saharan African": Locale.EN_GB,  # Using British English
+    "Pacific Islander": Locale.EN_AU,  # Using Australian English
+    "Indigenous": Locale.EN_CA  # Using Canadian English as fallback
+}
+
+# Common Middle Eastern first names with European spelling
+middle_eastern_male_names = [
+    "Adam", "Ali", "Amir", "Adel", "Ahmad", "Bilal", "Elias", "Farid", "Hamza", "Hassan",
+    "Ibrahim", "Jamal", "Karim", "Malik", "Mustafa", "Nabil", "Omar", "Rami", "Samir", "Tariq",
+    "Youssef", "Zaid", "Idris", "Rafiq", "Zayn", "Nadim", "Salim", "Tarek", "Walid", "Nasir"
+]
+
+middle_eastern_female_names = [
+    "Amira", "Aisha", "Dalia", "Fatima", "Hana", "Jasmine", "Karima", "Layla", "Maryam", "Nadia",
+    "Rania", "Salma", "Sofia", "Yasmin", "Zara", "Samira", "Leila", "Maya", "Noor", "Farida",
+    "Jamila", "Lina", "Naima", "Sana", "Zahra", "Soraya", "Rana", "Amina", "Dina", "Malika"
+]
+
+# Common Middle Eastern surnames with European spelling
+middle_eastern_surnames = [
+    "Abbas", "Ahmed", "Ali", "Amir", "Bakir", "Farid", "Hakim", "Hassan", "Ibrahim", "Kamal",
+    "Khalil", "Malik", "Mansour", "Nasser", "Omar", "Rahman", "Saleh", "Sayid", "Sharif", "Youssef",
+    "Zidan", "Kader", "Nazari", "Karimi", "Fahmy", "Haddad", "Kassim", "Najjar", "Rashed", "Suleiman"
+]
+
+# Distribution of nationalities in Germany (approximate percentages)
+# Based on 2021-2022 demographic data
+nationality_distribution = {
+    "German": 76.0,           # Native Germans
+    "Turkish": 3.28,          # Largest non-EU minority
+    "Eastern European": 3.08, # Combined Poland, Romania, etc.
+    "Italian": 1.88,
+    "Middle Eastern": 3.08,   # Syria, Iraq, Iran, etc.
+    "Russian": 1.28,
+    "Sub-Saharan African": 1.08,
+    "Southeast Asian": 1.58,  # Vietnam, Thailand, etc.
+    "Greek": 1.08,
+    "French": 0.78,
+    "Spanish": 0.48,
+    "British": 0.38,
+    "American": 0.38,
+    "Dutch": 0.38,
+    "Chinese": 0.48,
+    "Indian": 0.38,
+    "Latin American": 0.38,
+    "Japanese": 0.18,
+    "Korean": 0.18,
+    "Portuguese": 0.38,
+    "Australian": 0.18,
+    "Canadian": 0.18,
+    "Irish": 0.18,
+    "Brazilian": 0.28,
+    "Mexican": 0.18,
+    "Caribbean": 0.28,
+    "Egyptian": 0.28,
+    "South African": 0.18,
+    "Nigerian": 0.28,
+    "Scandinavian": 0.38,
+    "Pacific Islander": 0.18,
+    "Indigenous": 0.18
+}
+
+# Create lists for weighted random selection
+nationality_list = list(nationality_distribution.keys())
+nationality_weights = list(nationality_distribution.values())
+
+# Function to ensure all characters in a name are Latin
+def ensure_latin_characters(name):
+    """
+    Ensures a name only contains Latin characters by transliterating non-Latin characters
+    using the unidecode library.
+    
+    Args:
+        name (str): The input name that might contain non-Latin characters
+        
+    Returns:
+        str: A name with only Latin characters
+    """
+    # Use unidecode for transliteration of Unicode text to ASCII (Latin characters)
+    latin_name = unidecode(name)
+    
+    # If the name became empty or too short after transliteration, generate a fallback name
+    if len(latin_name.strip()) < 2:
+        return default_person.first_name() if len(name) < 10 else default_person.last_name()
+        
+    return latin_name
+
+# Initialize our dictionary of Mimesis instances lazily
+def get_person_for_culture(culture):
+    """Get a Mimesis Person instance for a specific culture, creating it if necessary."""
+    if culture not in mimesis_instances:
+        try:
+            locale = culture_to_locale.get(culture, default_locale)  # Default to German if no mapping exists
+            mimesis_instances[culture] = Person(locale)
+        except (AttributeError, ValueError) as e:
+            # If there's an error with the locale, fall back to English
+            logging.warning(f"Error creating Person instance for culture {culture} with locale {locale}: {e}")
+            logging.warning(f"Falling back to English locale")
+            mimesis_instances[culture] = Person(Locale.EN)
+    return mimesis_instances[culture]
 
 # Initialize input data arrays on global level
 car_list = []
@@ -74,6 +214,90 @@ def initialize_kafka_producer() -> Producer:
 
     LOGGER.info(f"Kafka configuration initialized with topic: {kafka_topic_name}")
     return Producer(kafka_config), kafka_topic_name
+
+########################################################################################
+# Generate Persona Details (Profession and Cultural Background)
+########################################################################################
+def generate_persona() -> Dict:
+    """
+    Generate a random persona based on age, profession, and cultural background.
+    
+    Returns:
+        A dictionary containing the persona's details.
+    """
+    professions = [
+        # Education
+        "Teacher", "Professor", "School Principal", "Tutor", "Education Consultant", "School Counselor",
+        
+        # Technology
+        "Software Developer", "Data Scientist", "Cybersecurity Analyst", "IT Support Specialist", 
+        "UX Designer", "Cloud Architect", "Game Developer", "AI Researcher",
+        
+        # Healthcare
+        "Nurse", "Doctor", "Dentist", "Paramedic", "Physical Therapist", "Pharmacist", 
+        "Veterinarian", "Nutritionist", "Mental Health Counselor", "Midwife",
+        
+        # Trades & Blue-collar
+        "Carpenter", "Electrician", "Plumber", "Auto Mechanic", "HVAC Technician", "Welder",
+        "Construction Worker", "Landscaper", "Factory Worker", "Machinist",
+        
+        # Hospitality & Service
+        "Chef", "Barista", "Server", "Hotel Manager", "Flight Attendant", "Bartender",
+        "Restaurant Manager", "Housekeeper", "Caregiver", "Hairstylist",
+        
+        # Creative & Arts
+        "Artist", "Actor", "Writer", "Musician", "Photographer", "Graphic Designer", 
+        "Fashion Designer", "Interior Designer", "Animator", "Film Director",
+        
+        # Business & Finance
+        "Accountant", "Financial Analyst", "Marketing Manager", "HR Manager", "Entrepreneur",
+        "Salesperson", "Real Estate Agent", "Insurance Agent", "Business Consultant", "Investment Banker",
+        
+        # Science & Research
+        "Scientist", "Researcher", "Lab Technician", "Biologist", "Chemist", "Astronomer",
+        "Environmental Scientist", "Marine Biologist", "Geologist", "Archaeologist",
+        
+        # Legal & Public Service
+        "Lawyer", "Police Officer", "Firefighter", "Social Worker", "Paralegal", "Judge", 
+        "Government Employee", "Military Personnel", "Diplomat", "Nonprofit Worker", 
+        
+        # Transportation
+        "Pilot", "Truck Driver", "Bus Driver", "Taxi Driver", "Ship Captain", "Train Engineer",
+        "Delivery Driver", "Courier", "Air Traffic Controller", "Transportation Planner",
+        
+        # Agriculture & Natural Resources
+        "Farmer", "Rancher", "Fisher", "Forester", "Agricultural Scientist", "Wildlife Biologist",
+        "Park Ranger", "Gardener", "Florist", "Beekeeper",
+        
+        # Media & Communications
+        "Journalist", "Translator", "Public Relations Specialist", "Social Media Manager",
+        "Content Creator", "Podcaster", "TV Producer", "News Anchor", "Technical Writer", "Editor",
+        
+        # Specialized & Emerging
+        "Drone Operator", "Sustainability Consultant", "Blockchain Developer", "E-sports Player",
+        "Robotics Engineer", "Virtual Reality Designer", "Genetic Counselor", "Renewable Energy Technician",
+        "Biomedical Engineer", "Telemedicine Physician",
+        
+        # Other Diverse Roles
+        "Librarian", "Athlete", "Personal Trainer", "Tailor", "Baker", "Jeweler",
+        "Tour Guide", "Yoga Instructor", "Massage Therapist", "Community Organizer"
+    ]
+    
+    # Select a cultural background using weighted random choice based on Germany's demographics
+    cultural_background = random.choices(
+        population=nationality_list,
+        weights=nationality_weights,
+        k=1
+    )[0]
+    
+    # If the selected background is not in our locale mapping, default to German
+    if cultural_background not in culture_to_locale:
+        cultural_background = "German"
+
+    return {
+        "profession": random.choice(professions),
+        "cultural_background": cultural_background,
+    }
 
 ########################################################################################
 # Main Function: Produce Kafka Messages
@@ -200,6 +424,20 @@ def get_car_weights():
     return [float(x) for x in car_weight_list]
 
 ########################################################################################
+# Custom function to generate Middle Eastern names with European-friendly spelling
+########################################################################################
+def generate_middle_eastern_name(gender):
+    """Generate a Middle Eastern name with European-friendly spelling."""
+    if gender == Gender.MALE:
+        first_name = random.choice(middle_eastern_male_names)
+    else:
+        first_name = random.choice(middle_eastern_female_names)
+    
+    last_name = random.choice(middle_eastern_surnames)
+    
+    return first_name, last_name
+
+########################################################################################
 #  Create synthetic data profile (Customer data, address data, car data, policy data )
 ########################################################################################
 def create_profile():
@@ -207,30 +445,56 @@ def create_profile():
     profile_rec = {}
     profile = {}
 
+    # Generate persona with profession and cultural background
+    persona = generate_persona()
+    profile_rec['Profession'] = persona['profession']
+    profile_rec['CulturalBackground'] = persona['cultural_background']
+    
+    # Get the appropriate Mimesis Person instance for this cultural background
+    profile_person = get_person_for_culture(persona['cultural_background'])
+
     #Insured Person information
     profile_rec['UserID'] = str(uuid.uuid4())
     profile_rec['Sex'] = random.choices(population=["M", "F"], cum_weights=(493,1000)).pop()
 
+    # Use culture-specific Mimesis for name generation
     if profile_rec['Sex'] == "M":
-        profile_rec["Prefix"] = "Herr"
-        profile_rec["Title"] = fake.prefix_male().replace("Herr", "")
-        profile_rec["FirstName"] = fake.first_name_male()
+        profile_rec["Prefix"] = "Herr" if persona['cultural_background'] == "German" else "Mr."
+        profile_rec["Title"] = random.choice(["Dr.", "Prof.", "", "", ""]) # Most people don't have titles
+        
+        # Special handling for Middle Eastern and Egyptian cultures
+        if persona['cultural_background'] in ["Middle Eastern", "Egyptian"]:
+            first_name, last_name = generate_middle_eastern_name(Gender.MALE)
+            profile_rec["FirstName"] = first_name
+            profile_rec["LastName"] = last_name
+        else:
+            first_name = profile_person.first_name(gender=Gender.MALE)
+            profile_rec["FirstName"] = ensure_latin_characters(first_name)
+            last_name = profile_person.last_name()
+            profile_rec["LastName"] = ensure_latin_characters(last_name)
     else:
-        profile_rec["Prefix"] = "Frau"
-        profile_rec["Title"] = fake.prefix_female().replace("Frau", "")
-        profile_rec["FirstName"] = fake.first_name_female()
-    profile_rec["LastName"] = fake.last_name()  
+        profile_rec["Prefix"] = "Frau" if persona['cultural_background'] == "German" else "Ms."
+        profile_rec["Title"] = random.choice(["Dr.", "Prof.", "", "", ""]) # Most people don't have titles
+        
+        # Special handling for Middle Eastern and Egyptian cultures
+        if persona['cultural_background'] in ["Middle Eastern", "Egyptian"]:
+            first_name, last_name = generate_middle_eastern_name(Gender.FEMALE)
+            profile_rec["FirstName"] = first_name
+            profile_rec["LastName"] = last_name
+        else:
+            first_name = profile_person.first_name(gender=Gender.FEMALE)
+            profile_rec["FirstName"] = ensure_latin_characters(first_name)
+            last_name = profile_person.last_name()
+            profile_rec["LastName"] = ensure_latin_characters(last_name)
+    
     print("NormalizeName")
     profile_rec["NameSearchKey"] =  normalize_name(profile_rec["FirstName"], profile_rec["LastName"])
-
-
-
 
     actyear = datetime.date.today().year
     ph_birthday = datetime.date(random.randint(actyear-90, actyear-16), random.randint(1,12), random.randint(1,28))
     profile_rec['Birthdate'] =  ph_birthday.isoformat() 
 
-    # Address Information
+    # Address Information (always using German locale for addresses)
     print("InjectAddress")
     inject_address(profile_rec)
     
@@ -288,21 +552,14 @@ def create_profile():
 #  Helper function to normalize names for index creation
 ########################################################################################
 def normalize_name(firstname, lastname):
-    # Mapping dictionary for german "Umlaute"
-    d = {'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss', 'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e'}
-
-    # normalize firstname
-    firstname_normalized = firstname.lower()
-    # substitute special chars
-    for src, target in d.items():
-        firstname_normalized = firstname_normalized.replace(src, target)
+    # Use unidecode for transliteration of Unicode text to ASCII
+    firstname_normalized = unidecode(firstname).lower()
+    lastname_normalized = unidecode(lastname).lower()
+    
+    # Remove any non-alphanumeric characters
     firstname_normalized = re.sub(r'[^a-zA-Z0-9]', '', firstname_normalized)
-    # normalize lastname
-    lastname_normalized = lastname.lower()
-    # substitute special chars
-    for src, target in d.items():
-        lastname_normalized = lastname_normalized.replace(src, target)
     lastname_normalized = re.sub(r'[^a-zA-Z0-9]', '', lastname_normalized)
+    
     # return normalized name
     return (firstname_normalized + lastname_normalized)
 
@@ -384,8 +641,8 @@ def inject_address(profile_rec):
 
     city = random.choices(population=city_list, cum_weights=city_weight_list).pop()
     print(city)
-    profile_rec['Street'] = fake.street_name()
-    profile_rec['HouseNumber'] = fake.building_number()
+    profile_rec['Street'] = default_address.street_name()
+    profile_rec['HouseNumber'] = str(random.randint(1, 150))
     profile_rec['ZipCode'] = city.split("|")[0]
     profile_rec['City'] = city.split("|")[1]
     profile_rec['Longitude'] = city.split("|")[2]

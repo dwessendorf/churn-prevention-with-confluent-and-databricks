@@ -4,13 +4,13 @@ output "environment_id" {
 }
 
 output "schema_registry_id" {
-  description = "ID of the created Schema Registry"
-  value       = confluent_schema_registry_cluster.essentials.id
+  description = "ID of the Schema Registry"
+  value       = data.confluent_schema_registry_cluster.essentials.id
 }
 
 output "schema_registry_rest_endpoint" {
   description = "REST endpoint of the Schema Registry"
-  value       = confluent_schema_registry_cluster.essentials.rest_endpoint
+  value       = data.confluent_schema_registry_cluster.essentials.rest_endpoint
 }
 
 output "service_account_id" {

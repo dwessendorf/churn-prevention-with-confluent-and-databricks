@@ -115,6 +115,7 @@ resource "aws_lambda_function" "function" {
       MIN_RECORDS_PER_RUN     = var.min_reviews_per_run
       MAX_RECORDS_PER_RUN     = var.max_reviews_per_run
       SECONDS_BETWEEN_REVIEWS = var.seconds_between_reviews
+      POLICY_PRODUCER_TOPIC   = var.policy_producer_topic_name
     }
   }
 }

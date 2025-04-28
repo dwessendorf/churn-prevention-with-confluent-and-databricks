@@ -1,0 +1,8 @@
+confluent-kafka==2.2.0
+pandas
+streamlit
+databricks-sql-connector
+pyarrow
+plotly
+mlflow
+databricks-sdk
